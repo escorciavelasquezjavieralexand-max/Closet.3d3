@@ -1,2 +1,107 @@
 # Closet.3d3
-Closet3D.
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Closet 3D Interactivo con Puertas (Touch)</title>
+<style>
+  body { margin: 0; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xf0f0f0);
+
+  const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 100);
+  camera.position.set(2, 2, 3);
+
+  const renderer = new THREE.WebGLRenderer({antialias: true});
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.appendChild(renderer.domElement);
+
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+
+  const light = new THREE.DirectionalLight(0xffffff, 1);
+  light.position.set(5, 10, 7.5);
+  scene.add(light);
+
+  const ambientLight = new THREE.AmbientLight(0x404040, 1.5);
+  scene.add(ambientLight);
+
+  const closetWidth = 1.5;
+  const closetHeight = 2;
+  const closetDepth = 0.6;
+
+  const material = new THREE.MeshStandardMaterial({color: 0xffffff});
+  const closet = new THREE.Mesh(new THREE.BoxGeometry(closetWidth, closetHeight, closetDepth), material);
+  closet.visible = false;
+  scene.add(closet);
+
+  const doorWidth = closetWidth/2 - 0.01;
+  const doorHeight = closetHeight;
+  const doorDepth = 0.02;
+  const doorMaterial = new THREE.MeshStandardMaterial({color: 0xe0e0e0});
+
+  const leftDoor = new THREE.Mesh(new THREE.BoxGeometry(doorWidth, doorHeight, doorDepth), doorMaterial);
+  leftDoor.position.set(-doorWidth/2, 0, closetDepth/2 + doorDepth/2);
+  scene.add(leftDoor);
+
+  const rightDoor = new THREE.Mesh(new THREE.BoxGeometry(doorWidth, doorHeight, doorDepth), doorMaterial);
+  rightDoor.position.set(doorWidth/2, 0, closetDepth/2 + doorDepth/2);
+  scene.add(rightDoor);
+
+  const shelfMaterial = new THREE.MeshStandardMaterial({color: 0xd0d0d0});
+  const shelfCount = 3;
+  for(let i=1; i<=shelfCount; i++){
+    const shelf = new THREE.Mesh(new THREE.BoxGeometry(closetWidth*0.95, 0.02, closetDepth*0.95), shelfMaterial);
+    shelf.position.y = -closetHeight/2 + i*(closetHeight/(shelfCount+1));
+    scene.add(shelf);
+  }
+
+  let doorAngle = 0;
+  let doorOpen = false;
+
+  const raycaster = new THREE.Raycaster();
+  const pointer = new THREE.Vector2();
+
+  function onPointerDown(event){
+    pointer.x = (event.touches ? event.touches[0].clientX : event.clientX) / window.innerWidth * 2 - 1;
+    pointer.y = - (event.touches ? event.touches[0].clientY : event.clientY) / window.innerHeight * 2 + 1;
+    raycaster.setFromCamera(pointer, camera);
+    const intersects = raycaster.intersectObjects([leftDoor, rightDoor]);
+    if(intersects.length > 0){
+      doorOpen = !doorOpen;
+    }
+  }
+
+  window.addEventListener('mousedown', onPointerDown);
+  window.addEventListener('touchstart', onPointerDown);
+
+  function animate(){
+    requestAnimationFrame(animate);
+    if(doorOpen && doorAngle < Math.PI/2){
+      doorAngle += 0.02;
+    } else if(!doorOpen && doorAngle > 0){
+      doorAngle -= 0.02;
+    }
+    leftDoor.rotation.y = doorAngle;
+    rightDoor.rotation.y = -doorAngle;
+
+    controls.update();
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth/window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+</script>
+</body>
+</html>
